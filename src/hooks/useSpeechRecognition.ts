@@ -5,7 +5,7 @@ interface SpeechRecognitionHook {
   isListening: boolean;
   isSupported: boolean;
   error: string | null;
-  startListening: () => void;
+  startListening: (existingText?: string) => void;
   stopListening: () => void;
   resetTranscript: () => void;
 }
@@ -46,7 +46,10 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const finalTranscriptRef = useRef('');
+
+  // Track: prefix (existing text before voice started) + final voice results + interim
+  const prefixTextRef = useRef('');
+  const sessionFinalRef = useRef('');
 
   // Check if browser supports Speech Recognition
   const isSupported = typeof window !== 'undefined' &&
@@ -63,19 +66,26 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let currentSessionFinal = '';
       let interimTranscript = '';
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Process ALL results from this session (not just new ones)
+      // This prevents duplication issues with resultIndex
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalTranscriptRef.current += result[0].transcript + ' ';
+          currentSessionFinal += result[0].transcript + ' ';
         } else {
           interimTranscript += result[0].transcript;
         }
       }
 
-      // Show final + current interim (no duplication)
-      setTranscript(finalTranscriptRef.current + interimTranscript);
+      sessionFinalRef.current = currentSessionFinal;
+
+      // Combine: prefix + final voice results + interim (no duplication)
+      const prefix = prefixTextRef.current;
+      const separator = prefix && (currentSessionFinal || interimTranscript) ? ' ' : '';
+      setTranscript((prefix + separator + currentSessionFinal + interimTranscript).trim());
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -100,10 +110,12 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     };
   }, [isSupported]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback((existingText?: string) => {
     if (recognitionRef.current && !isListening) {
-      finalTranscriptRef.current = '';
-      setTranscript('');
+      // Preserve existing text and append voice to it
+      prefixTextRef.current = existingText?.trim() || '';
+      sessionFinalRef.current = '';
+      setTranscript(prefixTextRef.current);
       setError(null);
       try {
         recognitionRef.current.start();
@@ -120,7 +132,8 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   }, [isListening]);
 
   const resetTranscript = useCallback(() => {
-    finalTranscriptRef.current = '';
+    prefixTextRef.current = '';
+    sessionFinalRef.current = '';
     setTranscript('');
   }, []);
 
