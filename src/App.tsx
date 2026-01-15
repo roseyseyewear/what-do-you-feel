@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mic, MicOff, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
+import { Mic, MicOff, ArrowRight, RotateCcw, Loader2, Keyboard } from 'lucide-react';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { cn } from './lib/utils';
 
@@ -31,6 +31,7 @@ function App() {
     whatItNeeds: '',
   });
   const [output, setOutput] = useState<ProcessedOutput | null>(null);
+  const [isTypingMode, setIsTypingMode] = useState(false);
 
   const {
     transcript,
@@ -120,6 +121,22 @@ function App() {
     }
   };
 
+  const handleTextChange = (value: string) => {
+    if (currentQuestion) {
+      setAnswers(prev => ({
+        ...prev,
+        [currentQuestion.key]: value,
+      }));
+    }
+  };
+
+  const toggleInputMode = () => {
+    if (isListening) {
+      stopListening();
+    }
+    setIsTypingMode(!isTypingMode);
+  };
+
   // Welcome Screen
   if (screen === 'welcome') {
     return (
@@ -175,7 +192,7 @@ function App() {
         </div>
 
         {/* Question */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
           <p className="text-sm text-zinc-500 uppercase tracking-wider">
             Question {questionNumber} of 3
           </p>
@@ -184,41 +201,71 @@ function App() {
             {currentQuestion?.prompt}
           </h2>
 
-          {/* Record Button */}
-          <div className="relative">
-            {isListening && (
-              <div className="absolute inset-0 bg-rose-600/30 rounded-full animate-pulse-ring" />
-            )}
-            <button
-              onClick={toggleRecording}
-              className={cn(
-                'relative w-24 h-24 rounded-full flex items-center justify-center transition-all',
-                isListening
-                  ? 'bg-rose-600 text-white scale-110'
-                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-              )}
-            >
-              {isListening ? (
-                <MicOff className="w-10 h-10" />
-              ) : (
-                <Mic className="w-10 h-10" />
-              )}
-            </button>
-          </div>
+          {isTypingMode ? (
+            /* Text Input Mode */
+            <>
+              <textarea
+                value={currentAnswer}
+                onChange={(e) => handleTextChange(e.target.value)}
+                placeholder="Type your answer here..."
+                className="w-full max-w-md h-32 p-4 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 resize-none focus:outline-none focus:border-rose-600"
+                autoFocus
+              />
+              <button
+                onClick={toggleInputMode}
+                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                <Mic className="w-4 h-4" />
+                Switch to voice
+              </button>
+            </>
+          ) : (
+            /* Voice Input Mode */
+            <>
+              <div className="relative">
+                {isListening && (
+                  <div className="absolute inset-0 bg-rose-600/30 rounded-full animate-pulse-ring" />
+                )}
+                <button
+                  onClick={toggleRecording}
+                  className={cn(
+                    'relative w-24 h-24 rounded-full flex items-center justify-center transition-all',
+                    isListening
+                      ? 'bg-rose-600 text-white scale-110'
+                      : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                  )}
+                >
+                  {isListening ? (
+                    <MicOff className="w-10 h-10" />
+                  ) : (
+                    <Mic className="w-10 h-10" />
+                  )}
+                </button>
+              </div>
 
-          <p className="text-sm text-zinc-500">
-            {isListening ? 'Tap to stop' : 'Tap to speak'}
-          </p>
+              <p className="text-sm text-zinc-500">
+                {isListening ? 'Tap to stop' : 'Tap to speak'}
+              </p>
 
-          {/* Transcript Display */}
-          <div className="w-full max-w-md min-h-[100px] p-4 bg-zinc-900 rounded-lg">
-            <p className={cn(
-              'text-lg',
-              currentAnswer ? 'text-white' : 'text-zinc-600'
-            )}>
-              {currentAnswer || 'Your words will appear here...'}
-            </p>
-          </div>
+              {/* Transcript Display */}
+              <div className="w-full max-w-md min-h-[100px] p-4 bg-zinc-900 rounded-lg">
+                <p className={cn(
+                  'text-lg',
+                  currentAnswer ? 'text-white' : 'text-zinc-600'
+                )}>
+                  {currentAnswer || 'Your words will appear here...'}
+                </p>
+              </div>
+
+              <button
+                onClick={toggleInputMode}
+                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                <Keyboard className="w-4 h-4" />
+                Type instead
+              </button>
+            </>
+          )}
         </div>
 
         {/* Next Button */}

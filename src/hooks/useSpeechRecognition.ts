@@ -46,6 +46,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const finalTranscriptRef = useRef('');
 
   // Check if browser supports Speech Recognition
   const isSupported = typeof window !== 'undefined' &&
@@ -62,25 +63,19 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let finalTranscript = '';
       let interimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+          finalTranscriptRef.current += result[0].transcript + ' ';
         } else {
           interimTranscript += result[0].transcript;
         }
       }
 
-      setTranscript(prev => {
-        if (finalTranscript) {
-          return prev + finalTranscript;
-        }
-        // For interim results, show them but don't add to final
-        return prev + interimTranscript;
-      });
+      // Show final + current interim (no duplication)
+      setTranscript(finalTranscriptRef.current + interimTranscript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -107,6 +102,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const startListening = useCallback(() => {
     if (recognitionRef.current && !isListening) {
+      finalTranscriptRef.current = '';
       setTranscript('');
       setError(null);
       try {
@@ -124,6 +120,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   }, [isListening]);
 
   const resetTranscript = useCallback(() => {
+    finalTranscriptRef.current = '';
     setTranscript('');
   }, []);
 
