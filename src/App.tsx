@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mic, MicOff, ArrowRight, RotateCcw, Loader2, Keyboard } from 'lucide-react';
+import { Mic, MicOff, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { cn } from './lib/utils';
 
@@ -31,7 +31,6 @@ function App() {
     whatItNeeds: '',
   });
   const [output, setOutput] = useState<ProcessedOutput | null>(null);
-  const [isTypingMode, setIsTypingMode] = useState(false);
 
   const {
     transcript,
@@ -130,12 +129,6 @@ function App() {
     }
   };
 
-  const toggleInputMode = () => {
-    if (isListening) {
-      stopListening();
-    }
-    setIsTypingMode(!isTypingMode);
-  };
 
   // Welcome Screen
   if (screen === 'welcome') {
@@ -162,10 +155,6 @@ function App() {
           >
             START
           </button>
-
-          <p className="text-xs text-zinc-500">
-            Voice-first • Mobile-first
-          </p>
         </div>
       </div>
     );
@@ -201,27 +190,17 @@ function App() {
             {currentQuestion?.prompt}
           </h2>
 
-          {isTypingMode ? (
-            /* Text Input Mode */
-            <>
-              <textarea
-                value={currentAnswer}
-                onChange={(e) => handleTextChange(e.target.value)}
-                placeholder="Type your answer here..."
-                className="w-full max-w-md h-32 p-4 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 resize-none focus:outline-none focus:border-rose-600"
-                autoFocus
-              />
-              <button
-                onClick={toggleInputMode}
-                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                <Mic className="w-4 h-4" />
-                Switch to voice
-              </button>
-            </>
-          ) : (
-            /* Voice Input Mode */
-            <>
+          {/* Combined Input: Text area + Mic button */}
+          <div className="w-full max-w-md space-y-4">
+            <textarea
+              value={currentAnswer}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="Type here or use the mic..."
+              className="w-full h-32 p-4 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 resize-none focus:outline-none focus:border-rose-600 text-lg"
+            />
+
+            {/* Mic Button */}
+            <div className="flex items-center justify-center gap-3">
               <div className="relative">
                 {isListening && (
                   <div className="absolute inset-0 bg-rose-600/30 rounded-full animate-pulse-ring" />
@@ -229,43 +208,24 @@ function App() {
                 <button
                   onClick={toggleRecording}
                   className={cn(
-                    'relative w-24 h-24 rounded-full flex items-center justify-center transition-all',
+                    'relative w-14 h-14 rounded-full flex items-center justify-center transition-all',
                     isListening
                       ? 'bg-rose-600 text-white scale-110'
                       : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                   )}
                 >
                   {isListening ? (
-                    <MicOff className="w-10 h-10" />
+                    <MicOff className="w-6 h-6" />
                   ) : (
-                    <Mic className="w-10 h-10" />
+                    <Mic className="w-6 h-6" />
                   )}
                 </button>
               </div>
-
               <p className="text-sm text-zinc-500">
-                {isListening ? 'Tap to stop' : 'Tap to speak'}
+                {isListening ? 'Recording...' : 'or tap to speak'}
               </p>
-
-              {/* Transcript Display */}
-              <div className="w-full max-w-md min-h-[100px] p-4 bg-zinc-900 rounded-lg">
-                <p className={cn(
-                  'text-lg',
-                  currentAnswer ? 'text-white' : 'text-zinc-600'
-                )}>
-                  {currentAnswer || 'Your words will appear here...'}
-                </p>
-              </div>
-
-              <button
-                onClick={toggleInputMode}
-                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                <Keyboard className="w-4 h-4" />
-                Type instead
-              </button>
-            </>
-          )}
+            </div>
+          </div>
         </div>
 
         {/* Next Button */}
